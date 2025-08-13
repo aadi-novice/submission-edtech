@@ -187,8 +187,8 @@ class APIService {
     return this.get<LessonPDF[]>(`/lessonpdfs/?lesson=${lessonId}`);
   }
 
-  async getPDFSignedUrl(pdfId: number): Promise<{ signed_url: string }> {
-    return this.get<{ signed_url: string }>(`/lessonpdfs/${pdfId}/view_pdf/`);
+  async getPDFSignedUrl(pdfId: number): Promise<{ signed_url: string; watermark?: string; user_id?: number; course_id?: number; lesson_id?: number }> {
+    return this.get<any>(`/lessonpdfs/${pdfId}/view_pdf/`);
   }
 
   // Upload methods

@@ -31,6 +31,7 @@ const CourseView: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [watermark, setWatermark] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
 
   useEffect(() => {
@@ -75,18 +76,23 @@ const CourseView: React.FC = () => {
         if (pdfs.length > 0) {
           const signedUrlData = await authAPI.getPDFSignedUrl(pdfs[0].id);
           setPdfUrl(signedUrlData.signed_url);
+          // Store watermark for the SecurePDFViewer
+          setWatermark(signedUrlData.watermark);
         } else {
           setPdfUrl(null);
+          setWatermark(null);
         }
       } catch (err) {
         console.error('Error fetching PDF:', err);
         setError('Failed to load PDF');
         setPdfUrl(null);
+        setWatermark(null);
       } finally {
         setPdfLoading(false);
       }
     } else {
       setPdfUrl(null);
+      setWatermark(null);
     }
   };
 
@@ -203,6 +209,7 @@ const CourseView: React.FC = () => {
                       pdfUrl={pdfUrl}
                       title={selectedLesson.title}
                       userId={user?.id}
+                      watermark={watermark}
                       className="h-96"
                     />
                   ) : (

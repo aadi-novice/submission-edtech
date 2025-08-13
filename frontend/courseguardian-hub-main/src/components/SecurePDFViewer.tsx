@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Loader2, Eye, Shield, Download, AlertTriangle } from 'lucide-react';
+import { Loader2, Eye, Shield, Download, AlertTriangle, User, Clock } from 'lucide-react';
 
 interface SecurePDFViewerProps {
   pdfUrl: string;
   title: string;
   userId?: number;
+  watermark?: string;
   className?: string;
 }
 
@@ -12,12 +13,15 @@ export const SecurePDFViewer: React.FC<SecurePDFViewerProps> = ({
   pdfUrl,
   title,
   userId,
+  watermark,
   className = ""
 }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isProtected, setIsProtected] = useState(true);
+  const [isWatermarkVisible, setIsWatermarkVisible] = useState(true);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [attempts, setAttempts] = useState(0);
 
   useEffect(() => {
     const loadPDF = async () => {
@@ -60,14 +64,17 @@ export const SecurePDFViewer: React.FC<SecurePDFViewerProps> = ({
       const handleKeyDown = (e: KeyboardEvent) => {
         // Prevent Ctrl+S, Ctrl+P, F12, etc.
         if (
-          e.ctrlKey && (e.key === 's' || e.key === 'p' || e.key === 'a') ||
+          e.ctrlKey && (e.key === 's' || e.key === 'p' || e.key === 'a' || e.key === 'c') ||
           e.key === 'F12' ||
           (e.ctrlKey && e.shiftKey && e.key === 'I') ||
           (e.ctrlKey && e.shiftKey && e.key === 'C') ||
-          (e.ctrlKey && e.shiftKey && e.key === 'J')
+          (e.ctrlKey && e.shiftKey && e.key === 'J') ||
+          e.key === 'PrintScreen' ||
+          (e.metaKey && (e.key === 's' || e.key === 'p' || e.key === 'c')) // Mac Cmd keys
         ) {
           e.preventDefault();
           e.stopPropagation();
+          setAttempts(prev => prev + 1);
           showProtectionWarning();
           return false;
         }
@@ -76,6 +83,8 @@ export const SecurePDFViewer: React.FC<SecurePDFViewerProps> = ({
       // Add context menu prevention
       const handleContextMenu = (e: MouseEvent) => {
         e.preventDefault();
+        e.stopPropagation();
+        setAttempts(prev => prev + 1);
         showProtectionWarning();
         return false;
       };
@@ -156,10 +165,16 @@ export const SecurePDFViewer: React.FC<SecurePDFViewerProps> = ({
             <Download className="h-3 w-3" />
             No Downloads
           </span>
+          {attempts > 0 && (
+            <span className="flex items-center gap-1 text-orange-600">
+              <AlertTriangle className="h-3 w-3" />
+              {attempts} Attempt{attempts !== 1 ? 's' : ''}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* PDF Content */}
+      {/* PDF Content with Watermark */}
       <div className="relative bg-white">
         <iframe
           ref={iframeRef}
@@ -176,9 +191,24 @@ export const SecurePDFViewer: React.FC<SecurePDFViewerProps> = ({
           }}
         />
         
+        {/* Dynamic Watermark Overlay */}
+        {isWatermarkVisible && watermark && (
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-4 right-4 transform rotate-12 bg-black bg-opacity-10 text-gray-600 text-xs font-mono px-3 py-1 rounded border border-gray-300">
+              {watermark}
+            </div>
+            <div className="absolute bottom-4 left-4 transform -rotate-12 bg-black bg-opacity-10 text-gray-600 text-xs font-mono px-3 py-1 rounded border border-gray-300">
+              {watermark}
+            </div>
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-gray-400 text-lg font-bold opacity-30">
+              PROTECTED
+            </div>
+          </div>
+        )}
+        
         {/* Protection Overlay */}
         {isProtected && (
-          <div 
+          <div
             className="absolute inset-0 bg-black bg-opacity-5 flex items-center justify-center pointer-events-none"
             style={{ display: 'none' }}
           >
@@ -200,7 +230,15 @@ export const SecurePDFViewer: React.FC<SecurePDFViewerProps> = ({
               This PDF is protected and cannot be downloaded, printed, or copied.
             </span>
           </div>
-          {userId && (
+          {watermark ? (
+            <div className="flex items-center gap-1 text-green-600">
+              <User className="h-3 w-3" />
+              <Clock className="h-3 w-3" />
+              <span className="font-medium">
+                {watermark}
+              </span>
+            </div>
+          ) : userId && (
             <span className="text-green-600 font-medium">
               Watermarked for User {userId}
             </span>
@@ -213,6 +251,11 @@ export const SecurePDFViewer: React.FC<SecurePDFViewerProps> = ({
           >
             ⚠️ Attempt Download (Blocked)
           </button>
+          {attempts > 3 && (
+            <div className="mt-1 text-xs text-orange-600">
+              ⚠️ Multiple security violations detected. Access may be restricted.
+            </div>
+          )}
         </div>
       </div>
     </div>

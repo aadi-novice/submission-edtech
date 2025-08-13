@@ -2,6 +2,7 @@
 from rest_framework import viewsets, permissions, exceptions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.utils import timezone
 from .models import Course, Lesson, LessonPDF
 from .serializers import CourseSerializer, LessonSerializer
 from .pdf_serializers import LessonPDFSerializer
@@ -17,9 +18,29 @@ class LessonPDFViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'])
     def view_pdf(self, request, pk=None):
         pdf = self.get_object()
-        # Generate signed URL for Supabase PDF
-        url = signed_url(pdf.pdf_path, expires_sec=60)
-        return Response({'signed_url': url})
+        user = request.user
+        
+        # Verify user is authenticated and enrolled in the course
+        if not user.is_authenticated:
+            raise exceptions.PermissionDenied("Authentication required.")
+        
+        # Check if user is enrolled in the course
+        if not Enrollment.objects.filter(user=user, course=pdf.lesson.course).exists():
+            raise exceptions.PermissionDenied("You are not enrolled in this course.")
+        
+        # Generate secure URL with user-specific validation
+        from .storage import generate_secure_pdf_url
+        url = generate_secure_pdf_url(pdf.pdf_path, user.id, expires_sec=300)  # 5 minutes for better UX
+        watermark = f"{user.username or user.email} • {timezone.now().strftime('%Y-%m-%d %H:%M')}"
+        
+        return Response({
+            'signed_url': url,
+            'watermark': watermark,
+            'user_id': user.id,
+            'course_id': pdf.lesson.course.id,
+            'lesson_id': pdf.lesson.id,
+            'access_token': user.auth_token if hasattr(user, 'auth_token') else None
+        })
 
 class CourseViewSet(viewsets.ModelViewSet):
     queryset = Course.objects.all()
