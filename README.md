@@ -27,11 +27,11 @@ A modern educational platform built with Django backend and React frontend, desi
 - **Routing**: React Router for navigation
 - **Icons**: Lucide React
 ## Sample View
-![alt text](/media/image.png)
-![alt text](/media/image2.png)
+![alt text](/attachments/image.png)
+![alt text](/attachments/image2.png)
 
 # Admin Panel
-![alt text](admin_panel_img.png)
+![alt text](/attachments/admin_panel_img.png)
 ## 📁 Project Structure
 
 ```
